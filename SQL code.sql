@@ -21,9 +21,9 @@ HAVING AVG(budget) > 60000000
 ORDER BY avg_gross DESC
 LIMIT 1;
 -- Task 3
-SELECT code,
-		inflation_rate,
-		unemployment_rate
+SELECT  code,
+	inflation_rate,
+	unemployment_rate
 FROM economies
 WHERE year = 2015
 	AND code NOT IN
@@ -34,10 +34,10 @@ WHERE year = 2015
 -- Task 4
 SELECT
 	name,
-		country_code,
-		city_proper_pop,
-		metroarea_pop,
-		city_proper_pop / metroarea_pop * 100 AS city_perc
+	country_code,
+	city_proper_pop,
+	metroarea_pop,
+	city_proper_pop / metroarea_pop * 100 AS city_perc
 FROM cities
 WHERE name IN
 	(SELECT capital
