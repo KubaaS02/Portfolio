@@ -74,7 +74,7 @@ ORDER BY liczba_przypadkow DESC;
 SELECT *
 FROM crime_data;
 
-SELECT COUNT(*) AS liczba_przestêpstw,
+SELECT COUNT(*) AS liczba_przestÃªpstw,
 	Category,
 	CASE WHEN Offender_Age BETWEEN 0 AND 18 THEN 'Under 18'
 		 WHEN Offender_Age BETWEEN 19 AND 30 THEN '19-30'
