@@ -1,0 +1,124 @@
+USE Crime_Data
+SELECT COLUMN_NAME, DATA_TYPE 
+FROM INFORMATION_SCHEMA.COLUMNS 
+WHERE TABLE_NAME = 'Crime_data';
+ALTER TABLE crime_data
+ALTER COLUMN Offender_Age float;
+ALTER TABLE crime_data
+ALTER COLUMN Offender_Age int;
+ALTER TABLE crime_data
+ALTER COLUMN Victim_Age float;
+ALTER TABLE crime_data
+ALTER COLUMN Victim_Age int;
+-- Demographic profile of offenders--
+-- Skin color--
+SELECT Offender_Race,
+	COUNT(Offender_Race)
+FROM crime_data
+GROUP BY Offender_Race
+ORDER BY COUNT(Offender_Race) DESC;
+-- gender--
+SELECT Offender_Gender,
+	COUNT(Offender_Gender)
+FROM crime_data
+GROUP BY Offender_Gender
+ORDER BY COUNT(Offender_Gender) DESC;
+-- Average age of person committing crime by skin color and gender--
+SELECT Offender_Race,
+	Offender_Gender,
+	AVG(Offender_Age)
+FROM crime_data
+GROUP BY Offender_Race, Offender_Gender
+ORDER BY AVG(Offender_Age) DESC;
+-- Demographic profile of victims--
+-- Skin color--
+SELECT Victim_Race,
+	COUNT(Victim_Race)
+FROM crime_data
+GROUP BY Victim_Race;
+-- gender--
+SELECT Victim_Gender,
+	COUNT(Victim_Gender)
+FROM crime_data
+GROUP BY Victim_Gender
+ORDER BY COUNT(Victim_Gender) DESC;
+-- Average age of victim by skin color and gender--
+SELECT Victim_Race,
+	Victim_Gender,
+	AVG(Victim_Age)
+FROM crime_data
+GROUP BY Victim_Race, Victim_Gender
+ORDER BY AVG(Victim_Age) DESC;
+-- The most common types of crimes--
+SELECT Category,
+	COUNT(*)
+FROM crime_data
+GROUP BY Category
+ORDER BY COUNT(*) DESC;
+--Relationship between offender status and case outcome--
+SELECT *
+FROM crime_data;
+CREATE VIEW cross_table AS
+SELECT a1.OffenderStatus,
+	a2.Disposition
+FROM (SELECT DISTINCT OffenderStatus FROM crime_data) a1
+CROSS JOIN (SELECT DISTINCT Disposition FROM crime_data) a2;
+SELECT c.OffenderStatus, c.Disposition, COUNT(d.OffenderStatus) AS liczba_przypadkow
+FROM cross_table c
+LEFT JOIN crime_data d 
+    ON c.OffenderStatus = d.OffenderStatus 
+    AND c.Disposition = d.Disposition
+GROUP BY c.OffenderStatus, c.Disposition
+ORDER BY liczba_przypadkow DESC;
+--Age vs. crime type--
+SELECT *
+FROM crime_data;
+
+SELECT COUNT(*) AS liczba_przestêpstw,
+	Category,
+	CASE WHEN Offender_Age BETWEEN 0 AND 18 THEN 'Under 18'
+		 WHEN Offender_Age BETWEEN 19 AND 30 THEN '19-30'
+		 WHEN Offender_Age BETWEEN 31 AND 50 THEN '31-50'
+		 WHEN Offender_Age > 50 THEN '51+'
+	END AS bins
+FROM crime_data
+GROUP BY CASE WHEN Offender_Age BETWEEN 0 AND 18 THEN 'Under 18'
+		 WHEN Offender_Age BETWEEN 19 AND 30 THEN '19-30'
+		 WHEN Offender_Age BETWEEN 31 AND 50 THEN '31-50'
+		 WHEN Offender_Age > 50 THEN '51+'
+	END, Category
+ORDER BY bins, COUNT(*) DESC;
+--Victims and their status after a crime--
+SELECT Victim_Fatal_Status,
+	Category,
+	Victim_Age,
+	COUNT(*)
+FROM crime_data
+GROUP BY Victim_Fatal_Status, Category, Victim_Age
+ORDER BY COUNT(*) DESC;
+SELECT 
+    Victim_Gender,
+    Age_Group,
+    Victim_Fatal_Status,
+    COUNT(*) AS liczba_przypadkow
+FROM (
+    SELECT 
+        Victim_Gender,
+        Victim_Fatal_Status,
+        CASE 
+            WHEN Victim_Age BETWEEN 0 AND 18 THEN 'Under 18'
+            WHEN Victim_Age BETWEEN 19 AND 30 THEN '19-30'
+            WHEN Victim_Age BETWEEN 31 AND 50 THEN '31-50'
+            WHEN Victim_Age > 50 THEN '51+'
+            ELSE 'Unknown'
+        END AS Age_Group
+    FROM crime_data
+) AS subquery
+GROUP BY Victim_Gender, Age_Group, Victim_Fatal_Status
+ORDER BY Victim_Gender, Age_Group, liczba_przypadkow DESC;
+--Comparison of the number of closed and open cases--
+SELECT Disposition, 
+	Category,
+	COUNT(*)
+FROM crime_data
+GROUP BY Disposition, Category;
