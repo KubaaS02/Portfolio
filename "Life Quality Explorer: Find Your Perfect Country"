@@ -1,0 +1,119 @@
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import plotly.express as px
+import streamlit as st
+from sklearn.preprocessing import MinMaxScaler
+import matplotlib.pyplot as plt
+
+# Load the dataset
+# Reading CSV file containing quality of life data
+# Replacing NaN values with 'Unidentified'
+file_path = r"C:\Projekt\Quality of Life\Quality_of_Life.csv"
+df = pd.read_csv(file_path)
+df.fillna('Unidentified', inplace=True)
+
+df.isnull().sum()  # Checking for missing values
+
+# Data cleaning and conversion
+# Removing unnecessary characters and converting values to numeric
+df['Quality of Life Value'] = df['Quality of Life Value'].astype(str).str.replace("':", "", regex=True).str.replace("'", "", regex=True).str.strip()
+df['Quality of Life Value'] = pd.to_numeric(df['Quality of Life Value'], errors='coerce')
+df['Property Price to Income Value'] = pd.to_numeric(df['Property Price to Income Value'], errors='coerce')
+
+# Normalizing selected columns
+columns_to_normalize = [
+    'Purchasing Power Value', 'Safety Value', 'Health Care Value', 'Climate Value',
+    'Cost of Living Value', 'Property Price to Income Value',
+    'Traffic Commute Time Value', 'Pollution Value', 'Quality of Life Value'
+]
+scaler = MinMaxScaler()
+df[columns_to_normalize] = scaler.fit_transform(df[columns_to_normalize])
+
+# Streamlit user interface
+st.sidebar.header("Customize Your Preferences")  # Sidebar section header
+
+# User adjusts their priorities using sliders
+weight_purchasing = st.sidebar.slider('Purchasing Power', 0, 100, 50)
+weight_safety = st.sidebar.slider('Safety', 0, 100, 50)
+weight_healthcare = st.sidebar.slider('Healthcare', 0, 100, 50)
+weight_climate = st.sidebar.slider('Climate', 0, 100, 50)
+weight_living_cost = st.sidebar.slider('Cost of living', 0, 100, 50)
+weight_property = st.sidebar.slider('Property Price to Income', 0, 100, 50)
+weight_traffic = st.sidebar.slider('Traffic Commute Time', 0, 100, 50)
+weight_pollution = st.sidebar.slider('Pollution', 0, 100, 50)
+weight_quality_live = st.sidebar.slider('Quality of Life', 0, 100, 50)
+
+# Assign weights to variables
+weights = {
+    'Purchasing Power Value': weight_purchasing,
+    'Safety Value': weight_safety,
+    'Health Care Value': weight_healthcare,
+    'Climate Value': weight_climate,
+    'Cost of Living Value': weight_living_cost,
+    'Property Price to Income Value': weight_property,
+    'Traffic Commute Time Value': weight_traffic,
+    'Pollution Value': weight_pollution,
+    'Quality of Life Value': weight_quality_live
+}
+
+# Calculate dynamic quality of life score based on user weights
+df['Dynamic Score'] = sum(df[col] * weight for col, weight in weights.items())
+
+# Sorting data based on dynamic score
+df = df.sort_values(by='Dynamic Score', ascending=False)
+df_without_na = df[df['Dynamic Score'].notna()]
+
+# Find the best country based on user preferences
+if st.button('Find perfect place'):
+    best_country = df_without_na.iloc[0]['country']
+    st.success(f'The ideal place to live according to your priorities is: **{best_country}**')
+
+# Display the top 10 countries
+st.subheader('🏆 TOP 10 best countries to live in according to your priorities')
+st.dataframe(df_without_na[['country', 'Dynamic Score']].head(10))
+
+# World map visualization showing quality of life ranking
+st.subheader('World map - quality of life ranking')
+fig = px.choropleth(
+    df_without_na,
+    locations='country',
+    locationmode='country names',
+    color='Dynamic Score',
+    color_continuous_scale='viridis',
+    title='Ranking quality of life by your priorities'
+)
+st.plotly_chart(fig)
+
+# Compare two selected countries on a radar chart
+st.subheader('Comparison of the countries on the radar of the chart')
+countries = sorted(df_without_na['country'].unique())
+country1 = st.selectbox('Select the first country', countries)
+country2 = st.selectbox('Choose a second country', countries)
+
+df_compare = df_without_na[df_without_na['country'].isin([country1, country2])]
+categories = columns_to_normalize
+
+values_1 = df_compare[df_compare["country"] == country1][categories].values.flatten().tolist()
+values_2 = df_compare[df_compare["country"] == country2][categories].values.flatten().tolist()
+values_1 += values_1[:1]
+values_2 += values_2[:1]
+
+# Creating the radar chart
+fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
+angles += angles[:1]
+ax.fill(angles, values_1, color='blue', alpha=0.25, label=country1)
+ax.fill(angles, values_2, color='red', alpha=0.25, label=country2)
+ax.set_yticklabels([])
+ax.set_xticks(angles[:-1])
+ax.set_xticklabels(categories, fontsize=10)
+ax.legend()
+st.pyplot(fig)
+
+# Correlation matrix between quality of life indicators
+st.subheader('Correlation between quality of life indicators')
+corr_matrix = df_without_na[columns_to_normalize].corr()
+fig, ax = plt.subplots(figsize=(10, 6))
+sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5, ax=ax)
+st.pyplot(fig)
